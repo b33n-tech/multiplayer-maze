@@ -1,0 +1,162 @@
+<!-- index.html : version labyrinthe -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Labyrinthe Remote</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+html,body{
+  margin:0;
+  background:#111;
+  color:white;
+  font-family:Arial, sans-serif;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+}
+
+.wrap{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+}
+
+canvas{
+  background:#000;
+  border:2px solid #333;
+  box-shadow:0 0 20px rgba(0,255,120,.15);
+}
+
+#msg{
+  margin-top:15px;
+  font-size:22px;
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <canvas id="game"></canvas>
+  <div id="msg">Utilise le téléphone 🎮</div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://TONPROJET.supabase.co";
+const SUPABASE_KEY = "TA_CLE_ANON";
+
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* LABYRINTHE */
+const maze = [
+"###########",
+"#S#     # #",
+"# # ### # #",
+"# #   #   #",
+"# ### ### #",
+"#     #  E#",
+"###########"
+];
+
+const size = 60;
+const rows = maze.length;
+const cols = maze[0].length;
+
+const canvas = document.getElementById("game");
+canvas.width = cols * size;
+canvas.height = rows * size;
+
+const ctx = canvas.getContext("2d");
+const msg = document.getElementById("msg");
+
+let px = 1;
+let py = 1;
+
+/* trouver départ */
+for(let y=0;y<rows;y++){
+  for(let x=0;x<cols;x++){
+    if(maze[y][x] === "S"){
+      px = x;
+      py = y;
+    }
+  }
+}
+
+function draw(){
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  for(let y=0;y<rows;y++){
+    for(let x=0;x<cols;x++){
+
+      const cell = maze[y][x];
+
+      if(cell === "#"){
+        ctx.fillStyle = "#0077ff";
+        ctx.fillRect(x*size,y*size,size,size);
+      }
+
+      if(cell === "E"){
+        ctx.fillStyle = "gold";
+        ctx.fillRect(x*size+10,y*size+10,size-20,size-20);
+      }
+    }
+  }
+
+  /* joueur */
+  ctx.beginPath();
+  ctx.arc(
+    px*size + size/2,
+    py*size + size/2,
+    size/3,
+    0,
+    Math.PI*2
+  );
+  ctx.fillStyle = "#00ff88";
+  ctx.shadowBlur = 20;
+  ctx.shadowColor = "#00ff88";
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+draw();
+
+function move(dir){
+
+  let nx = px;
+  let ny = py;
+
+  if(dir==="left") nx--;
+  if(dir==="right") nx++;
+  if(dir==="up") ny--;
+  if(dir==="down") ny++;
+
+  const target = maze[ny][nx];
+
+  if(target !== "#"){
+    px = nx;
+    py = ny;
+    draw();
+  }
+
+  if(target === "E"){
+    msg.innerHTML = "🏆 Bravo ! Sortie trouvée.";
+  }
+}
+
+/* realtime */
+const channel = client.channel("remote-control");
+
+channel
+.on("broadcast",{event:"move"}, ({payload})=>{
+   move(payload.dir);
+})
+.subscribe();
+
+</script>
+</body>
+</html>
