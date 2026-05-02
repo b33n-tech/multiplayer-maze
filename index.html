@@ -1,10 +1,10 @@
-<!-- index.html : version labyrinthe -->
+<!-- index.html : labyrinthe version smooth -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Labyrinthe Remote</title>
+<title>Labyrinthe Smooth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
@@ -12,28 +12,25 @@ html,body{
   margin:0;
   background:#111;
   color:white;
-  font-family:Arial, sans-serif;
+  font-family:Arial,sans-serif;
   width:100%;
   height:100%;
   overflow:hidden;
 }
-
 .wrap{
+  height:100%;
   display:flex;
   flex-direction:column;
-  align-items:center;
   justify-content:center;
-  height:100%;
+  align-items:center;
 }
-
 canvas{
   background:#000;
   border:2px solid #333;
-  box-shadow:0 0 20px rgba(0,255,120,.15);
+  box-shadow:0 0 25px rgba(0,255,120,.12);
 }
-
 #msg{
-  margin-top:15px;
+  margin-top:14px;
   font-size:22px;
 }
 </style>
@@ -42,7 +39,7 @@ canvas{
 
 <div class="wrap">
   <canvas id="game"></canvas>
-  <div id="msg">Utilise le téléphone 🎮</div>
+  <div id="msg">Télécommande active 🎮</div>
 </div>
 
 <script>
@@ -51,7 +48,7 @@ const SUPABASE_KEY = "sb_publishable_JMOdzvwVNDBTpHlqKy584Q_Z5SvuYmh";
 
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/* LABYRINTHE */
+/* maze */
 const maze = [
 "###########",
 "#S#     # #",
@@ -73,23 +70,24 @@ canvas.height = rows * size;
 const ctx = canvas.getContext("2d");
 const msg = document.getElementById("msg");
 
+/* logical grid position */
 let px = 1;
 let py = 1;
 
-/* trouver départ */
+/* render smooth position */
+let rx = 1;
+let ry = 1;
+
+/* start */
 for(let y=0;y<rows;y++){
   for(let x=0;x<cols;x++){
     if(maze[y][x] === "S"){
-      px = x;
-      py = y;
+      px=x; py=y; rx=x; ry=y;
     }
   }
 }
 
-function draw(){
-
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
+function drawMaze(){
   for(let y=0;y<rows;y++){
     for(let x=0;x<cols;x++){
 
@@ -98,24 +96,26 @@ function draw(){
       if(cell === "#"){
         ctx.fillStyle = "#0077ff";
         ctx.fillRect(x*size,y*size,size,size);
+      } else {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(x*size,y*size,size,size);
       }
 
       if(cell === "E"){
         ctx.fillStyle = "gold";
-        ctx.fillRect(x*size+10,y*size+10,size-20,size-20);
+        ctx.fillRect(x*size+12,y*size+12,size-24,size-24);
       }
     }
   }
+}
 
-  /* joueur */
+function drawPlayer(){
+
+  const cx = rx*size + size/2;
+  const cy = ry*size + size/2;
+
   ctx.beginPath();
-  ctx.arc(
-    px*size + size/2,
-    py*size + size/2,
-    size/3,
-    0,
-    Math.PI*2
-  );
+  ctx.arc(cx,cy,size/3,0,Math.PI*2);
   ctx.fillStyle = "#00ff88";
   ctx.shadowBlur = 20;
   ctx.shadowColor = "#00ff88";
@@ -123,7 +123,21 @@ function draw(){
   ctx.shadowBlur = 0;
 }
 
-draw();
+function loop(){
+
+  /* lerp smooth */
+  rx += (px - rx) * 0.22;
+  ry += (py - ry) * 0.22;
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  drawMaze();
+  drawPlayer();
+
+  requestAnimationFrame(loop);
+}
+
+loop();
 
 function move(dir){
 
@@ -140,11 +154,10 @@ function move(dir){
   if(target !== "#"){
     px = nx;
     py = ny;
-    draw();
   }
 
   if(target === "E"){
-    msg.innerHTML = "🏆 Bravo ! Sortie trouvée.";
+    msg.innerHTML = "🏆 Bravo !";
   }
 }
 
@@ -156,7 +169,7 @@ channel
    move(payload.dir);
 })
 .subscribe();
-
 </script>
+
 </body>
 </html>
